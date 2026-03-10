@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/liamvuilleumier/Desktop/comm_sys_bootcamp/mini_database",
+      "program": "/Users/liamvuilleumier/Desktop/comm_sys_bootcamp/mini_database/build/Debug/outDebug"
+    }
+  ]
+}
