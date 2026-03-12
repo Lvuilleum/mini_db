@@ -1,0 +1,11 @@
+# compiled program
+mydb
+
+# object files
+*.o
+
+# databases
+*.db
+
+# macOS
+.DS_Store

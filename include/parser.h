@@ -1,3 +1,5 @@
+#pragma once
+
 # define MAX_USERNAME 32 
 
 /**
@@ -27,7 +29,6 @@ typedef enum {
     PARSE_UNRECOGNIZED_STATEMENT,
     PARSE_SYNTAX_ERROR
 } ParseResult;
-
 
 
 /**

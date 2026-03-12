@@ -11,6 +11,8 @@
  */
 
 
+
+
 int main(void)
 {
     /**
@@ -22,6 +24,7 @@ int main(void)
      */
     char input[256];
     int running = 1;
+    Table* table = calloc(1, sizeof(Table));
     while (running)
     {
         printf("db>");
@@ -36,10 +39,10 @@ int main(void)
         {
             printf("this person %s with id %d of age %d has been selected\n",
                  statement->row.username, statement->row.id, statement->row.age);
-            //executeInsert();
+            executeInsert();
         } else if (statement->type == SELECT)
         {
-            //executeSelect();
+            executeSelect(table);
         } else {
             printf("Invalid command\n");
         }
