@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <parser.h>
-#include <database.h>
+#include "parser.h"
+#include "database.h"
 
 /**
  * Voici l'implementation du programme 
@@ -25,20 +25,24 @@ int main(void)
     while (running)
     {
         printf("db>");
-        fget(input, sizeof(char), stdin);
+        if (fgets(input, sizeof(input), stdin) == NULL)
+        {
+            break;
+        }
         Statement* statement = malloc(sizeof(Statement));
 
-        parse(input, &statement);
+        parse(input, statement);
         if (statement->type == INSERT)
         {
-            executeInsert();
+            printf("this person %s with id %d of age %d has been selected\n",
+                 statement->row.username, statement->row.id, statement->row.age);
+            //executeInsert();
         } else if (statement->type == SELECT)
         {
-            executeSelect();
+            //executeSelect();
         } else {
             printf("Invalid command\n");
         }
-        
         
         if (strncmp(input, ".exit", 5) == 0)
         {

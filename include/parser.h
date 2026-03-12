@@ -18,8 +18,15 @@ typedef enum {
 
 typedef struct {
     parserChoice type;
-    Row rowtoInsert;
+    Row row;
 } Statement;
+
+
+typedef enum {
+    PARSE_OK = 0,
+    PARSE_UNRECOGNIZED_STATEMENT,
+    PARSE_SYNTAX_ERROR
+} ParseResult;
 
 
 
@@ -29,3 +36,4 @@ typedef struct {
  * =============
  */
 int parse(char* entry, Statement* statement);
+int insertParse(Statement* statement);
