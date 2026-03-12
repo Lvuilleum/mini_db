@@ -19,7 +19,7 @@ typedef struct {
  * FUNCTIONS
  * ===============
  */
-void executeInsert(Table* table, Statement* statement);
+void executeInsert(Table* table, Statement* statement, FILE* file);
 
 
-void executeSelect(Table* table);
+void executeSelect(FILE* file);

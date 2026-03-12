@@ -2,6 +2,8 @@
 
 #include "database.h"
 #include "parser.h"
+#include "storage.h"
+
 
 /**
  *  ce fichier : insère une ligne/affiche les lignes/
@@ -9,7 +11,7 @@
  *  parser -> database -> storage 
  */
 
-void executeInsert(Table* table, Statement* statement)
+void executeInsert(Table* table, Statement* statement, FILE* file)
 {
     if (table->num_rows >= MAX_ROWS) {
         printf("Error: table is full\n");
@@ -17,13 +19,16 @@ void executeInsert(Table* table, Statement* statement)
     }
     table->rows[table->num_rows] = statement->row;
     table->num_rows++;
+    write_row(file, &statement->row);
 }
 
-void executeSelect(Table* table)
+void executeSelect(FILE* file)
 {
-    for (int i = 0; i < table->num_rows; i++)
+    Row row;
+    rewind(file);
+    
+    while (read_row(file, &row))
     {
-        Row row = table->rows[i];
         printf("%d %s %d\n", row.id, row.username, row.age);
     }
 }

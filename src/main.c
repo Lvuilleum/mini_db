@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "parser.h"
 #include "database.h"
+#include "storage.h"
 
 /**
  * Voici l'implementation du programme 
@@ -14,6 +15,7 @@ int main(void)
     char input[256];
     int running = 1;
     Table* table = calloc(1, sizeof(Table));
+    FILE* db_file = db_open("database.db");
 
     while (running)
     {
@@ -29,11 +31,11 @@ int main(void)
         if (statement->type == INSERT)
         {
             printf("executed\n");
-            executeInsert(table, statement);
+            executeInsert(table, statement, db_file);
 
         } else if (statement->type == SELECT)
         {
-            executeSelect(table);
+            executeSelect(db_file);
 
         } else {
             printf("Invalid command\n");
@@ -41,6 +43,7 @@ int main(void)
         
         if (strncmp(input, ".exit", 5) == 0)
         {
+            db_close(db_file);
             running = 0;
         }
     }
