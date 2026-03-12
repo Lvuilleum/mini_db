@@ -9,9 +9,14 @@
  *  parser -> database -> storage 
  */
 
-void executeInsert()
+void executeInsert(Table* table, Statement* statement)
 {
-
+    if (table->num_rows >= MAX_ROWS) {
+        printf("Error: table is full\n");
+        return;
+    }
+    table->rows[table->num_rows] = statement->row;
+    table->num_rows++;
 }
 
 void executeSelect(Table* table)
