@@ -61,6 +61,9 @@ Each module has a specific responsibility:
 
 ---
 
+# Command to run the project
+gcc -Wall -Wextra -Werror -Iinclude src/*.c -o mydb
+
 # Planned Features
 
 * command-line interface
