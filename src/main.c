@@ -25,8 +25,25 @@ int main(void)
             break;
         }
 
+        if (strncmp(input, ".exit", 5) == 0)
+        {
+            db_close(db_file);
+            running = 0;
+            break;
+        }
+
         Statement* statement = malloc(sizeof(Statement));
-        parse(input, statement);
+        ParseResult parse_result = parse(input, statement);
+
+        if (parse_result != PARSE_OK) {
+            if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
+                printf("Unrecognized command\n");
+            } else {
+                printf("Syntax error\n");
+            }
+            free(statement);
+            continue;
+        }
         
         if (statement->type == INSERT)
         {
@@ -36,16 +53,14 @@ int main(void)
         } else if (statement->type == SELECT)
         {
             executeSelect(db_file);
-
+        } else if (statement->type == SELECTONE)
+        { 
+            executeSelectOne(db_file, statement->row.id);
         } else {
             printf("Invalid command\n");
         }
         
-        if (strncmp(input, ".exit", 5) == 0)
-        {
-            db_close(db_file);
-            running = 0;
-        }
+        free(statement);
     }
     return 0;
 }

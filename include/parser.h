@@ -15,6 +15,7 @@ typedef struct {
 
 typedef enum {
     SELECT,
+    SELECTONE,
     INSERT
 } parserChoice;
 

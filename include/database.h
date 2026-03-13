@@ -23,3 +23,4 @@ void executeInsert(Table* table, Statement* statement, FILE* file);
 
 
 void executeSelect(FILE* file);
+void executeSelectOne(FILE* file, int id);

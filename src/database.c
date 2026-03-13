@@ -32,3 +32,18 @@ void executeSelect(FILE* file)
         printf("%d %s %d\n", row.id, row.username, row.age);
     }
 }
+
+void executeSelectOne(FILE* file, int id)
+{
+    Row row;
+    rewind(file);
+    while (read_row(file, &row))
+    {
+        if (row.id == id)
+        {
+            printf("%d %s %d\n", row.id, row.username, row.age);
+            return;
+        }
+    }
+    printf("No one has this id in the database");
+}
