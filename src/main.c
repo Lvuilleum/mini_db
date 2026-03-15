@@ -5,6 +5,17 @@
 #include "database.h"
 #include "storage.h"
 
+static void print_help(void)
+{
+    printf("Available commands:\n");
+    printf("  insert <id> <username> <age>\n");
+    printf("  select\n");
+    printf("  select <id>\n");
+    printf("  delete <id>\n");
+    printf("  help or .help\n");
+    printf("  .exit\n");
+}
+
 /**
  * Voici l'implementation du programme 
  * utilisateur -> main.c -> parser.c -> database.c
@@ -32,14 +43,20 @@ int main(void)
             break;
         }
 
+        if (strncmp(input, "help", 4) == 0 || strncmp(input, ".help", 5) == 0)
+        {
+            print_help();
+            continue;
+        }
+
         Statement* statement = malloc(sizeof(Statement));
         ParseResult parse_result = parse(input, statement);
 
         if (parse_result != PARSE_OK) {
             if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
-                printf("Unrecognized command\n");
+                printf("Unrecognized command, type help for command list\n");
             } else {
-                printf("Syntax error\n");
+                printf("Syntax error, type help for command list\n");
             }
             free(statement);
             continue;
