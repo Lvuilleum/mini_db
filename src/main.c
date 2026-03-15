@@ -56,6 +56,9 @@ int main(void)
         } else if (statement->type == SELECTONE)
         { 
             executeSelectOne(db_file, statement->row.id);
+        } else if (statement->type == DELETE)
+        {
+            executeDelete(db_file, statement->row.id);
         } else {
             printf("Invalid command\n");
         }

@@ -8,3 +8,7 @@ void db_close(FILE* file);
 void write_row(FILE* file, Row* row);
 
 int read_row(FILE* file, Row* row);
+
+int delete_row(FILE* file, int id);
+
+int id_exists(FILE* file, int id);

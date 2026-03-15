@@ -11,12 +11,14 @@ typedef struct {
     int id;
     char username[MAX_USERNAME];
     int age;
+    int is_deleted; // 0 = active, 1 = delete
 } Row;
 
 typedef enum {
     SELECT,
     SELECTONE,
-    INSERT
+    INSERT,
+    DELETE
 } parserChoice;
 
 typedef struct {
@@ -39,3 +41,4 @@ typedef enum {
  */
 int parse(char* entry, Statement* statement);
 int insertParse(Statement* statement);
+int deleteParse(Statement* statement);

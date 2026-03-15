@@ -17,6 +17,11 @@ void executeInsert(Table* table, Statement* statement, FILE* file)
         printf("Error: table is full\n");
         return;
     }
+    if (id_exists(file, statement->row.id)) {
+        printf("Error: id %d already exists\n", statement->row.id);
+        return;
+    }
+    statement->row.is_deleted = 0;
     table->rows[table->num_rows] = statement->row;
     table->num_rows++;
     write_row(file, &statement->row);
@@ -29,7 +34,8 @@ void executeSelect(FILE* file)
     
     while (read_row(file, &row))
     {
-        printf("%d %s %d\n", row.id, row.username, row.age);
+        if (!row.is_deleted)
+            printf("%d %s %d\n", row.id, row.username, row.age);
     }
 }
 
@@ -39,11 +45,21 @@ void executeSelectOne(FILE* file, int id)
     rewind(file);
     while (read_row(file, &row))
     {
-        if (row.id == id)
+        if (row.id == id && row.is_deleted == 0)
         {
             printf("%d %s %d\n", row.id, row.username, row.age);
             return;
         }
     }
-    printf("No one has this id in the database");
+    printf("No one has this id in the database\n");
+}
+
+void executeDelete(FILE* file, int id)
+{
+    if (delete_row(file, id))
+    {
+        printf("row %d deleted\n", id);
+    } else {
+        printf("No row with id %d found\n", id);
+    }
 }

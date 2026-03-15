@@ -69,6 +69,7 @@ gcc -Wall -Wextra -Werror -Iinclude src/*.c -o mydb
 * command-line interface
 * `insert` command
 * `select` command
+* `delete` command
 * persistent file storage
 * modular C architecture
 * basic indexing (future improvement)
