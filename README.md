@@ -31,6 +31,9 @@ db > select
 1 Alice 20
 2 Bob 30
 
+db > delete 1
+row 1 deleted 
+
 db > .exit
 ```
 
@@ -69,6 +72,7 @@ gcc -Wall -Wextra -Werror -Iinclude src/*.c -o mydb
 * command-line interface
 * `insert` command
 * `select` command
+* `delete` command
 * persistent file storage
 * modular C architecture
 * basic indexing (future improvement)
