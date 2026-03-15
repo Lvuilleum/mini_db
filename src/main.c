@@ -5,6 +5,7 @@
 #include "database.h"
 #include "storage.h"
 
+/* Print built-in command documentation for the CLI. */
 static void print_help(void)
 {
     printf("Available commands:\n");
@@ -16,17 +17,19 @@ static void print_help(void)
     printf("  .exit\n");
 }
 
-/**
- * Voici l'implementation du programme 
- * utilisateur -> main.c -> parser.c -> database.c
- * -> storage.c -> fichier disque 
- */
+/* Program flow: user input -> parser -> database -> storage -> disk file. */
 int main(void)
 {
     char input[256];
     int running = 1;
     Table* table = calloc(1, sizeof(Table));
     FILE* db_file = db_open("database.db");
+
+    if (table == NULL) {
+        printf("Unable to allocate table\n");
+        db_close(db_file);
+        return EXIT_FAILURE;
+    }
 
     while (running)
     {
@@ -49,8 +52,8 @@ int main(void)
             continue;
         }
 
-        Statement* statement = malloc(sizeof(Statement));
-        ParseResult parse_result = parse(input, statement);
+        Statement statement;
+        ParseResult parse_result = parse(input, &statement);
 
         if (parse_result != PARSE_OK) {
             if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
@@ -58,29 +61,28 @@ int main(void)
             } else {
                 printf("Syntax error, type help for command list\n");
             }
-            free(statement);
             continue;
         }
         
-        if (statement->type == INSERT)
+        if (statement.type == INSERT)
         {
             printf("executed\n");
-            executeInsert(table, statement, db_file);
+            executeInsert(table, &statement, db_file);
 
-        } else if (statement->type == SELECT)
+        } else if (statement.type == SELECT)
         {
             executeSelect(db_file);
-        } else if (statement->type == SELECTONE)
+        } else if (statement.type == SELECTONE)
         { 
-            executeSelectOne(db_file, statement->row.id);
-        } else if (statement->type == DELETE)
+            executeSelectOne(db_file, statement.row.id);
+        } else if (statement.type == DELETE)
         {
-            executeDelete(db_file, statement->row.id);
+            executeDelete(db_file, statement.row.id);
         } else {
             printf("Invalid command\n");
         }
-        
-        free(statement);
     }
+
+    free(table);
     return 0;
 }

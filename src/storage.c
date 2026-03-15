@@ -2,14 +2,12 @@
 #include "parser.h"
 #include <stdlib.h>
 
-/**
- * Gère le fichier de la base de donnée 
- * ouvre les fichier/lis les données/écris les données 
- * mémoire <-> fihcier 
+/*
+ * File storage layer.
+ * Handles opening the database file and binary row read/write operations.
  */
 
-//a → append (écriture à la fin) / + → lecture + écriture -> a+
-// PASSAGE à r+b pour que is_delete marche
+/* Use r+b to support in-place updates required by delete. */
  FILE* db_open(const char* filename)
  {
     FILE* file = fopen(filename, "r+b");
@@ -32,7 +30,9 @@ void db_close(FILE* file)
 
 void write_row(FILE* file, Row* row)
 {
+    fseek(file, 0, SEEK_END);
     fwrite(row, sizeof(Row), 1, file);
+    fflush(file);
 }
 
 int read_row(FILE* file, Row* row)
@@ -44,6 +44,7 @@ int delete_row(FILE* file, int id)
 {
     Row row;
     rewind(file);
+    clearerr(file);
     int index = 0;
     
     while (read_row(file ,&row))
@@ -54,21 +55,22 @@ int delete_row(FILE* file, int id)
             fseek(file, (long)(index * sizeof(Row)), SEEK_SET);
             fwrite(&row, sizeof(Row), 1, file);
             fflush(file);
-            return 1; // succès
+            return 1;
         }
         index++;
     }
-    return 0; // id not found
+    return 0;
 }
 
 int id_exists(FILE* file, int id)
 {
     Row row;
     rewind(file);
+    clearerr(file);
     while (read_row(file, &row))
     {
         if (row.is_deleted == 0 && row.id == id)
-            return 1; // found
+            return 1;
     }
-    return 0; // not found
+    return 0;
 }

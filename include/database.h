@@ -2,23 +2,13 @@
 
 #define MAX_ROWS 1000
 
-/**
- * ================
- * STRUCTURES
- * ================
- */
+/* In-memory table used for basic runtime constraints. */
 typedef struct {
     Row rows[MAX_ROWS];
     int num_rows;
 } Table;
 
-
-
-/**
- * ===============
- * FUNCTIONS
- * ===============
- */
+/* Database command executors. */
 void executeInsert(Table* table, Statement* statement, FILE* file);
 
 

@@ -3,18 +3,25 @@
 #include <string.h>
 #include <limits.h>
 #include "parser.h"
-/**
- * Pasers transforme le texte 
- * en commande executable 
- * texte -> Structure C
- * 
- */
 
-/**
- * ================
- * Functions 
- * ================
- */
+/* Parse one integer token and validate full conversion and bounds. */
+static int parse_int_token(const char* token, int* out)
+{
+    char* endptr = NULL;
+    long value = 0;
+
+    if (token == NULL || out == NULL) {
+        return 0;
+    }
+
+    value = strtol(token, &endptr, 10);
+    if (*token == '\0' || *endptr != '\0' || value < INT_MIN || value > INT_MAX) {
+        return 0;
+    }
+
+    *out = (int)value;
+    return 1;
+}
 
 int parse(char* entry, Statement* statement)
 {
@@ -42,13 +49,10 @@ int parse(char* entry, Statement* statement)
             return PARSE_SYNTAX_ERROR;
         }
 
-        char* endptr = NULL;
-        long id = strtol(id_str, &endptr, 10);
-        if (*id_str == '\0' || *endptr != '\0' || id < INT_MIN || id > INT_MAX) {
+        if (!parse_int_token(id_str, &statement->row.id)) {
             return PARSE_SYNTAX_ERROR;
         }
 
-        statement->row.id = (int)id;
         statement->type = SELECTONE;
         return PARSE_OK;
     }
@@ -63,8 +67,6 @@ int parse(char* entry, Statement* statement)
 
 int insertParse(Statement* statement)
 {
-    char* endptr = NULL;
-    long id = 0;
     char* id_str = strtok(NULL, " \t\r\n");
     char* name_str = strtok(NULL, " \t\r\n");
     char* age_str = strtok(NULL, " \t\r\n");
@@ -73,29 +75,26 @@ int insertParse(Statement* statement)
         return PARSE_SYNTAX_ERROR;
     }
 
-    id = strtol(id_str, &endptr, 10);
-    if (*id_str == '\0' || *endptr != '\0' || id < INT_MIN || id > INT_MAX) {
+    if (!parse_int_token(id_str, &statement->row.id)) {
         return PARSE_SYNTAX_ERROR;
     }
 
-    statement->row.id = (int)id;
+    if (!parse_int_token(age_str, &statement->row.age)) {
+        return PARSE_SYNTAX_ERROR;
+    }
+
     strncpy(statement->row.username, name_str, MAX_USERNAME - 1);
     statement->row.username[MAX_USERNAME - 1] = '\0';
-    statement->row.age = atoi(age_str);
     return PARSE_OK;
 }
 
 int deleteParse(Statement* statement)
 {
-    char* endptr = NULL;
-    long id = 0;
     char* id_str = strtok(NULL, " \t\r\n");
-    if (id_str == NULL) return PARSE_SYNTAX_ERROR;
 
-    id = strtol(id_str, &endptr, 10);
-    if (*id_str == '\0' || *endptr != '\0' || id < INT_MIN || id > INT_MAX) {
+    if (!parse_int_token(id_str, &statement->row.id)) {
         return PARSE_SYNTAX_ERROR;
     }
-    statement->row.id = id;
+
     return PARSE_OK;
 }

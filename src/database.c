@@ -4,12 +4,7 @@
 #include "parser.h"
 #include "storage.h"
 
-
-/**
- *  ce fichier : insère une ligne/affiche les lignes/
- *  vérifie si la table est pleine 
- *  parser -> database -> storage 
- */
+/* Execute validated statements against the persisted row store. */
 
 void executeInsert(Table* table, Statement* statement, FILE* file)
 {
@@ -51,14 +46,14 @@ void executeSelectOne(FILE* file, int id)
             return;
         }
     }
-    printf("No one has this id in the database\n");
+    printf("No row with id %d found\n", id);
 }
 
 void executeDelete(FILE* file, int id)
 {
     if (delete_row(file, id))
     {
-        printf("row %d deleted\n", id);
+        printf("Row %d deleted\n", id);
     } else {
         printf("No row with id %d found\n", id);
     }
