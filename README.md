@@ -44,15 +44,27 @@ The data will be stored in a file (`data.db`) so that it persists between execut
 # Project Structure
 
 ```
-mini-db/
+MINI_DATABASE/
 │
-├── main.c
-├── parser.c
-├── parser.h
-├── database.c
-├── database.h
-├── storage.c
-├── storage.h
+├── include/                
+│   ├── database.h          
+│   ├── parser.h            
+│   └── storage.h           
+│
+├── src/                    
+│   ├── main.c              
+│   ├── database.c          
+│   ├── parser.c            
+│   └── storage.c           
+│
+├── data/                   
+│   └── database.db
+│
+├── build/                  
+│
+├── .gitignore              
+├── makefile                
+└── README.md     
 ```
 
 Each module has a specific responsibility:
@@ -65,7 +77,8 @@ Each module has a specific responsibility:
 ---
 
 # Command to run the project
-gcc -Wall -Wextra -Werror -Iinclude src/*.c -o mydb
+make
+
 
 # Planned Features
 
