@@ -18,11 +18,36 @@ static void print_help(void)
     printf("  .exit\n");
 }
 
+static void print_parse_error(ParseResult parse_result)
+{
+    if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
+        printf("Unrecognized command, type help for command list\n");
+    } else {
+        printf("Syntax error, type help for command list\n");
+    }
+}
+
+static void execute_statement(Table* table, FILE* db_file, Statement* statement)
+{
+    if (statement->type == INSERT) {
+        executeInsert(table, statement, db_file);
+    } else if (statement->type == SELECT) {
+        executeSelect(db_file);
+    } else if (statement->type == SELECTONE) {
+        executeSelectOne(db_file, statement->row.id);
+    } else if (statement->type == DELETE) {
+        executeDelete(db_file, statement->row.id);
+    } else if (statement->type == UPDATE) {
+        executeUpdate(db_file, statement->row.id, statement->row.username, statement->row.age);
+    } else {
+        printf("Invalid command\n");
+    }
+}
+
 /* Program flow: user input -> parser -> database -> storage -> disk file. */
 int main(void)
 {
     char input[256];
-    int running = 1;
     Table* table = calloc(1, sizeof(Table));
     FILE* db_file = db_open("database.db");
 
@@ -32,7 +57,7 @@ int main(void)
         return EXIT_FAILURE;
     }
 
-    while (running)
+    while (1)
     {
         printf("db> ");
         if (fgets(input, sizeof(input), stdin) == NULL)
@@ -42,8 +67,6 @@ int main(void)
 
         if (strncmp(input, ".exit", 5) == 0)
         {
-            db_close(db_file);
-            running = 0;
             break;
         }
 
@@ -57,36 +80,14 @@ int main(void)
         ParseResult parse_result = parse(input, &statement);
 
         if (parse_result != PARSE_OK) {
-            if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
-                printf("Unrecognized command, type help for command list\n");
-            } else {
-                printf("Syntax error, type help for command list\n");
-            }
+            print_parse_error(parse_result);
             continue;
         }
-        
-        if (statement.type == INSERT)
-        {
-            printf("executed\n");
-            executeInsert(table, &statement, db_file);
 
-        } else if (statement.type == SELECT)
-        {
-            executeSelect(db_file);
-        } else if (statement.type == SELECTONE)
-        { 
-            executeSelectOne(db_file, statement.row.id);
-        } else if (statement.type == DELETE)
-        {
-            executeDelete(db_file, statement.row.id);
-        } else if (statement.type == UPDATE)
-        {
-            executeUpdate(db_file, statement.row.id, statement.row.username, statement.row.age);
-        } else {
-            printf("Invalid command\n");
-        }
+        execute_statement(table, db_file, &statement);
     }
 
+    db_close(db_file);
     free(table);
     return 0;
 }

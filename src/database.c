@@ -5,6 +5,11 @@
 #include "parser.h"
 #include "storage.h"
 
+#define MSG_NOT_FOUND "No row with id %d found\n"
+#define MSG_UPDATED "Row %d updated\n"
+
+static Row* find_row_by_id(FILE* file, int id, int* out_index);
+static void print_row(const Row* row);
 /* Execute validated statements against the persisted row store. */
 
 void executeInsert(Table* table, Statement* statement, FILE* file)
@@ -31,23 +36,21 @@ void executeSelect(FILE* file)
     while (read_row(file, &row))
     {
         if (!row.is_deleted)
-            printf("%d %s %d\n", row.id, row.username, row.age);
+            print_row(&row);
     }
 }
 
 void executeSelectOne(FILE* file, int id)
 {
-    Row row;
-    rewind(file);
-    while (read_row(file, &row))
+    int index;
+    Row* row = find_row_by_id(file, id, &index);
+    
+    if (row)
     {
-        if (row.id == id && row.is_deleted == 0)
-        {
-            printf("%d %s %d\n", row.id, row.username, row.age);
-            return;
-        }
+        print_row(row);
+    } else {
+        printf(MSG_NOT_FOUND, id);
     }
-    printf("No row with id %d found\n", id);
 }
 
 void executeDelete(FILE* file, int id)
@@ -56,13 +59,40 @@ void executeDelete(FILE* file, int id)
     {
         printf("Row %d deleted\n", id);
     } else {
-        printf("No row with id %d found\n", id);
+        printf(MSG_NOT_FOUND, id);
     }
 }
 
 void executeUpdate(FILE* file, int id, char* new_name, int new_age)
 {
-    Row row;
+    int index;
+    Row* row = find_row_by_id(file, id, &index);
+    
+    if (row)
+    {
+        strncpy(row->username, new_name, MAX_USERNAME - 1);
+        row->username[MAX_USERNAME - 1] = '\0';
+        row->age = new_age;
+        fseek(file, (long)(index * sizeof(Row)), SEEK_SET);
+        fwrite(row, sizeof(Row), 1, file);
+        fflush(file);
+        printf(MSG_UPDATED, id);
+    } else {
+        printf(MSG_NOT_FOUND, id);
+    }
+}
+
+
+/**
+ * ========================
+ * Helper Functions
+ * ========================
+ */
+
+/* Find a row by ID, returns NULL if not found */
+static Row* find_row_by_id(FILE* file, int id, int* out_index)
+{
+    static Row row;
     rewind(file);
     clearerr(file);
     int index = 0;
@@ -71,16 +101,15 @@ void executeUpdate(FILE* file, int id, char* new_name, int new_age)
     {
         if (row.id == id && row.is_deleted == 0)
         {
-            strncpy(row.username, new_name, MAX_USERNAME - 1);
-            row.username[MAX_USERNAME - 1] = '\0';
-            row.age = new_age;
-            fseek(file, (long)(index * sizeof(Row)), SEEK_SET);
-            fwrite(&row, sizeof(Row), 1, file);
-            fflush(file);
-            printf("Row %d updated\n", id);
-            return;
+            if (out_index) *out_index = index;
+            return &row;
         }
         index++;
     }
-    printf("No row with id %d found\n", id);
+    return NULL;
+}
+
+static void print_row(const Row* row)
+{
+    printf("%d %s %d\n", row->id, row->username, row->age);
 }

@@ -37,3 +37,4 @@ int parse(char* entry, Statement* statement);
 int insertParse(Statement* statement);
 int deleteParse(Statement* statement);
 int updateParse(Statement* statement);
+int parse_select(Statement* statement);
