@@ -13,6 +13,7 @@ static void print_help(void)
     printf("  select\n");
     printf("  select <id>\n");
     printf("  delete <id>\n");
+    printf("  update <id> <username> <age>\n");
     printf("  help or .help\n");
     printf("  .exit\n");
 }
@@ -78,6 +79,9 @@ int main(void)
         } else if (statement.type == DELETE)
         {
             executeDelete(db_file, statement.row.id);
+        } else if (statement.type == UPDATE)
+        {
+            executeUpdate(db_file, statement.row.id, statement.row.username, statement.row.age);
         } else {
             printf("Invalid command\n");
         }

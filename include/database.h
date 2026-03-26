@@ -15,3 +15,4 @@ void executeInsert(Table* table, Statement* statement, FILE* file);
 void executeSelect(FILE* file);
 void executeSelectOne(FILE* file, int id);
 void executeDelete(FILE* file, int id);
+void executeUpdate(FILE* file, int id, char* new_name, int new_age);

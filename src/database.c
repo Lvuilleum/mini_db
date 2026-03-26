@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "database.h"
 #include "parser.h"
@@ -57,4 +58,29 @@ void executeDelete(FILE* file, int id)
     } else {
         printf("No row with id %d found\n", id);
     }
+}
+
+void executeUpdate(FILE* file, int id, char* new_name, int new_age)
+{
+    Row row;
+    rewind(file);
+    clearerr(file);
+    int index = 0;
+    
+    while (read_row(file, &row))
+    {
+        if (row.id == id && row.is_deleted == 0)
+        {
+            strncpy(row.username, new_name, MAX_USERNAME - 1);
+            row.username[MAX_USERNAME - 1] = '\0';
+            row.age = new_age;
+            fseek(file, (long)(index * sizeof(Row)), SEEK_SET);
+            fwrite(&row, sizeof(Row), 1, file);
+            fflush(file);
+            printf("Row %d updated\n", id);
+            return;
+        }
+        index++;
+    }
+    printf("No row with id %d found\n", id);
 }

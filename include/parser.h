@@ -15,7 +15,8 @@ typedef enum {
     SELECT,
     SELECTONE,
     INSERT,
-    DELETE
+    DELETE,
+    UPDATE
 } StatementType;
 
 typedef struct {
@@ -35,3 +36,4 @@ typedef enum {
 int parse(char* entry, Statement* statement);
 int insertParse(Statement* statement);
 int deleteParse(Statement* statement);
+int updateParse(Statement* statement);

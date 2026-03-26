@@ -62,6 +62,11 @@ int parse(char* entry, Statement* statement)
         return deleteParse(statement);
     }
 
+    if (strcmp(type, "update") == 0) {
+        statement->type = UPDATE;
+        return updateParse(statement);
+    }
+
     return PARSE_UNRECOGNIZED_STATEMENT;
 }
 
@@ -96,5 +101,29 @@ int deleteParse(Statement* statement)
         return PARSE_SYNTAX_ERROR;
     }
 
+    return PARSE_OK;
+}
+
+int updateParse(Statement* statement)
+{
+    char* id_str = strtok(NULL, " \t\r\n");
+    char* new_name = strtok(NULL, " \t\r\n");
+    char* new_age_str = strtok(NULL, " \t\r\n");
+
+    if (id_str == NULL || new_name == NULL || new_age_str == NULL) {
+        return PARSE_SYNTAX_ERROR;
+    }
+
+    if (!parse_int_token(id_str, &statement->row.id)) {
+        return PARSE_SYNTAX_ERROR;
+    }
+
+    if (!parse_int_token(new_age_str, &statement->row.age)) {
+        return PARSE_SYNTAX_ERROR;
+    }
+
+    strncpy(statement->row.username, new_name, MAX_USERNAME - 1);
+    statement->row.username[MAX_USERNAME - 1] = '\0';
+    
     return PARSE_OK;
 }
