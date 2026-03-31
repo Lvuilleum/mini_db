@@ -5,6 +5,9 @@
 #include "database.h"
 #include "storage.h"
 
+static int is_exact_command(const char* input, const char* command);
+static void discard_remainder_of_line(void);
+
 /* Print built-in command documentation for the CLI. */
 static void print_help(void)
 {
@@ -22,15 +25,17 @@ static void print_parse_error(ParseResult parse_result)
 {
     if (parse_result == PARSE_UNRECOGNIZED_STATEMENT) {
         printf("Unrecognized command, type help for command list\n");
+    } else if (parse_result == PARSE_CONSTRAINT_ERROR) {
+        printf("Constraint error: id/age must be non-negative and username length must be 1-%d\n", MAX_USERNAME - 1);
     } else {
         printf("Syntax error, type help for command list\n");
     }
 }
 
-static void execute_statement(Table* table, FILE* db_file, Statement* statement)
+static void execute_statement(FILE* db_file, const Statement* statement)
 {
     if (statement->type == INSERT) {
-        executeInsert(table, statement, db_file);
+        executeInsert(db_file, statement);
     } else if (statement->type == SELECT) {
         executeSelect(db_file);
     } else if (statement->type == SELECTONE) {
@@ -48,30 +53,26 @@ static void execute_statement(Table* table, FILE* db_file, Statement* statement)
 int main(void)
 {
     char input[256];
-    Table* table = calloc(1, sizeof(Table));
     FILE* db_file = db_open("database.db");
-
-    if (table == NULL) {
-        printf("Unable to allocate table\n");
-        db_close(db_file);
-        return EXIT_FAILURE;
-    }
 
     while (1)
     {
         printf("db> ");
-        if (fgets(input, sizeof(input), stdin) == NULL)
-        {
+        if (fgets(input, sizeof(input), stdin) == NULL) {
             break;
         }
 
-        if (strncmp(input, ".exit", 5) == 0)
-        {
+        if (strchr(input, '\n') == NULL) {
+            discard_remainder_of_line();
+            printf("Input too long\n");
+            continue;
+        }
+
+        if (is_exact_command(input, ".exit")) {
             break;
         }
 
-        if (strncmp(input, "help", 4) == 0 || strncmp(input, ".help", 5) == 0)
-        {
+        if (is_exact_command(input, "help") || is_exact_command(input, ".help")) {
             print_help();
             continue;
         }
@@ -84,10 +85,33 @@ int main(void)
             continue;
         }
 
-        execute_statement(table, db_file, &statement);
+        execute_statement(db_file, &statement);
     }
 
     db_close(db_file);
-    free(table);
     return 0;
+}
+
+static int is_exact_command(const char* input, const char* command)
+{
+    size_t command_len;
+    size_t token_len;
+    const char* start = input;
+
+    while (*start == ' ' || *start == '\t') {
+        start++;
+    }
+
+    command_len = strlen(command);
+    token_len = strcspn(start, " \t\r\n");
+
+    return token_len == command_len && strncmp(start, command, command_len) == 0;
+}
+
+static void discard_remainder_of_line(void)
+{
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF) {
+        ;
+    }
 }

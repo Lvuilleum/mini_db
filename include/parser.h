@@ -28,7 +28,8 @@ typedef struct {
 typedef enum {
     PARSE_OK = 0,
     PARSE_UNRECOGNIZED_STATEMENT,
-    PARSE_SYNTAX_ERROR
+    PARSE_SYNTAX_ERROR,
+    PARSE_CONSTRAINT_ERROR
 } ParseResult;
 
 
