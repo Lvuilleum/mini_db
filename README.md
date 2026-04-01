@@ -77,7 +77,7 @@ Each module has a specific responsibility:
 ---
 
 # Command to run the project
-make
+make run 
 
 
 # Planned Features

@@ -12,44 +12,47 @@
 static void print_row(const Row* row);
 /* Execute validated statements against the persisted row store. */
 
-void executeInsert(FILE* file, const Statement* statement)
+void executeInsert(Table* table, const Statement* statement)
 {
     Row row_to_write;
 
-    if (count_active_rows(file) >= MAX_ROWS) {
+    if (count_active_rows(table) >= (int)MAX_ROWS) {
         printf("Error: table is full\n");
         return;
     }
 
-    if (id_exists(file, statement->row.id)) {
+    if (id_exists(table, statement->row.id)) {
         printf("Error: id %d already exists\n", statement->row.id);
         return;
     }
 
     row_to_write = statement->row;
     row_to_write.is_deleted = 0;
-    if (!write_row(file, &row_to_write)) {
+    if (!write_row(table, &row_to_write)) {
         printf(MSG_IO_ERROR);
     }
 }
 
-void executeSelect(FILE* file)
+void executeSelect(Table* table)
 {
     Row row;
-    rewind(file);
-    
-    while (read_row(file, &row))
-    {
-        if (!row.is_deleted)
+
+    for (uint32_t i = 0; i < table->num_rows; i++) {
+        if (!read_row(table, i, &row)) {
+            printf(MSG_IO_ERROR);
+            return;
+        }
+        if (!row.is_deleted) {
             print_row(&row);
+        }
     }
 }
 
-void executeSelectOne(FILE* file, int id)
+void executeSelectOne(Table* table, int id)
 {
     Row row;
     
-    if (find_active_row_by_id(file, id, &row, NULL))
+    if (find_active_row_by_id(table, id, &row, NULL))
     {
         print_row(&row);
     } else {
@@ -57,9 +60,9 @@ void executeSelectOne(FILE* file, int id)
     }
 }
 
-void executeDelete(FILE* file, int id)
+void executeDelete(Table* table, int id)
 {
-    if (delete_row(file, id))
+    if (delete_row(table, id))
     {
         printf("Row %d deleted\n", id);
     } else {
@@ -67,18 +70,18 @@ void executeDelete(FILE* file, int id)
     }
 }
 
-void executeUpdate(FILE* file, int id, const char* new_name, int new_age)
+void executeUpdate(Table* table, int id, const char* new_name, int new_age)
 {
     Row row;
-    int index;
+    uint32_t index;
     
-    if (find_active_row_by_id(file, id, &row, &index))
+    if (find_active_row_by_id(table, id, &row, &index))
     {
         strncpy(row.username, new_name, MAX_USERNAME - 1);
         row.username[MAX_USERNAME - 1] = '\0';
         row.age = new_age;
 
-        if (write_row_at(file, index, &row)) {
+        if (write_row_at(table, index, &row)) {
             printf(MSG_UPDATED, id);
         } else {
             printf(MSG_IO_ERROR);

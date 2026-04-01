@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "parser.h"
 #include "database.h"
@@ -11,7 +11,7 @@ static void discard_remainder_of_line(void);
 /* Print built-in command documentation for the CLI. */
 static void print_help(void)
 {
-    printf("Available commands:\n");
+    printf("Availables commands:\n");
     printf("  insert <id> <username> <age>\n");
     printf("  select\n");
     printf("  select <id>\n");
@@ -32,18 +32,18 @@ static void print_parse_error(ParseResult parse_result)
     }
 }
 
-static void execute_statement(FILE* db_file, const Statement* statement)
+static void execute_statement(Table* table, const Statement* statement)
 {
     if (statement->type == INSERT) {
-        executeInsert(db_file, statement);
+        executeInsert(table, statement);
     } else if (statement->type == SELECT) {
-        executeSelect(db_file);
+        executeSelect(table);
     } else if (statement->type == SELECTONE) {
-        executeSelectOne(db_file, statement->row.id);
+        executeSelectOne(table, statement->row.id);
     } else if (statement->type == DELETE) {
-        executeDelete(db_file, statement->row.id);
+        executeDelete(table, statement->row.id);
     } else if (statement->type == UPDATE) {
-        executeUpdate(db_file, statement->row.id, statement->row.username, statement->row.age);
+        executeUpdate(table, statement->row.id, statement->row.username, statement->row.age);
     } else {
         printf("Invalid command\n");
     }
@@ -53,7 +53,7 @@ static void execute_statement(FILE* db_file, const Statement* statement)
 int main(void)
 {
     char input[256];
-    FILE* db_file = db_open("database.db");
+    Table* table = db_open("database.db");
 
     while (1)
     {
@@ -85,10 +85,10 @@ int main(void)
             continue;
         }
 
-        execute_statement(db_file, &statement);
+        execute_statement(table, &statement);
     }
 
-    db_close(db_file);
+    db_close(table);
     return 0;
 }
 
