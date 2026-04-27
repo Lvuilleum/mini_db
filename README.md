@@ -80,7 +80,7 @@ Each module has a specific responsibility:
 make run 
 
 
-# Planned Features
+# Features
 
 * command-line interface
 * `insert` command
@@ -88,7 +88,7 @@ make run
 * `delete` command
 * persistent file storage
 * modular C architecture
-* basic indexing (future improvement)
+* basic indexing future improvement
 
 ---
 
