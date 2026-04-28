@@ -10,8 +10,8 @@
 #include "storage.h"
 #include "protocol.h"
 
-static int is_exact_command(const char* input, const char* command);
-static void discard_remainder_of_line(void);
+#define RESPONSE_END_MARKER "<END>\n"
+
 
 /* Print built-in command documentation for the CLI. */
 static void print_help(void)
@@ -26,6 +26,39 @@ static void print_help(void)
     printf("  .exit\n");
 }
 
+static void read_response(int sockfd)
+{
+    char response[2048];
+    size_t used = 0;
+
+    while (1) {
+        ssize_t n = recv(sockfd, response + used, sizeof(response) - 1 - used, 0);
+        if (n > 0) {
+            used += (size_t)n;
+            response[used] = '\0';
+
+            if (strstr(response, RESPONSE_END_MARKER) != NULL) {
+                char* marker = strstr(response, RESPONSE_END_MARKER);
+                *marker = '\0';
+                printf("%s", response);
+                return;
+            }
+
+            if (used == sizeof(response) - 1) {
+                printf("%s", response);
+                used = 0;
+            }
+
+        } else if (n == 0) {
+            printf("Server closed connections\n");
+            return;
+        } else {
+            perror("recv failed");
+            return;
+        }
+    }
+}
+
 /* Program flow: user input -> parser -> database -> storage -> disk file. */
 int main(void)
 {
@@ -34,19 +67,19 @@ int main(void)
 
     char input[256];
 
-    // Creation of a socket 
+    // 1. Creation of a socket 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    // Initialization of the server 
+    // 2. Initialization of the server 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    // connect to the server 
+    // 3. connect to the server 
     if(connect(sockfd, (const struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         perror("connection failed");
         exit(EXIT_FAILURE);
@@ -54,7 +87,7 @@ int main(void)
     printf("Connected to server\n");
 
 
-    // Loop to read user input
+    // 4. Loop to read user input
     while (1)
     {
         printf("db> ");
@@ -85,25 +118,14 @@ int main(void)
             exit(EXIT_FAILURE);
         }
 
-        char response[2048];
-        int n = recv(sockfd, response, sizeof(response) - 1, 0);
-        if (n > 0) {
-            response[n] = '\0';
-            printf("%s", response);
-        } else if (n == 0) {
-            printf("Server closed connections\n");
-            break;
-        } else {
-            perror("recv failed");
-            break;
-        }
+        read_response(sockfd);
     }
 
     close(sockfd);
     return 0;
 }
 
-static int is_exact_command(const char* input, const char* command)
+int is_exact_command(const char* input, const char* command)
 {
     size_t command_len;
     size_t token_len;
@@ -119,7 +141,7 @@ static int is_exact_command(const char* input, const char* command)
     return token_len == command_len && strncmp(start, command, command_len) == 0;
 }
 
-static void discard_remainder_of_line(void)
+void discard_remainder_of_line(void)
 {
     int ch;
     while ((ch = getchar()) != '\n' && ch != EOF) {

@@ -1,104 +1,106 @@
 # Mini Database in C
 
-This project is a **simple database engine written in C**.
-The goal is to learn low-level programming concepts such as:
+Mini relational-style database written in C, with a simple TCP client/server architecture.
 
-* memory management
-* file storage
-* parsing user input
-* modular C project architecture
+## Overview
 
-The project is currently **in early development**.
+This project is built to practice low-level systems concepts:
 
----
+- memory management
+- file I/O and persistence
+- socket programming (client/server)
+- command parsing
+- modular C architecture
 
-# Project Goal
+The server stores rows in `database.db` and the client provides an interactive `db>` prompt.
 
-The final program will allow users to interact with a small database from the command line.
+## Current Architecture
 
-Example of the expected interface:
+- `db_server`: accepts TCP connections on port `8080`, parses and executes commands.
+- `db_client`: interactive CLI that sends commands to the server and prints server responses.
+- persistent storage: row data is saved in `database.db`.
+- in-memory id index: a hash-table index is rebuilt from disk on startup for faster lookups.
 
-```
-./mydb data.db
+## Supported Commands
 
-db > insert 1 Alice 20
-Executed.
+From the client prompt:
 
-db > insert 2 Bob 30
-Executed.
+- `insert <id> <username> <age>`
+- `select` (list all active rows)
+- `select <id>` (fetch one row by id)
+- `delete <id>`
+- `update <id> <username> <age>`
+- `help` or `.help`
+- `.exit`
 
-db > select
+Example session:
+
+```text
+db> insert 1 Alice 20
+row inserted with sucess
+
+db> select
 1 Alice 20
-2 Bob 30
 
-db > delete 1
-row 1 deleted 
+db> select 1
+1 Alice 20
 
-db > .exit
+db> update 1 Alicia 21
+updated with success
+
+db> delete 1
+deleted with success
 ```
 
-The data will be stored in a file (`data.db`) so that it persists between executions.
+## Project Structure
 
----
-
-# Project Structure
-
-```
-MINI_DATABASE/
-│
-├── include/                
-│   ├── database.h          
-│   ├── parser.h            
-│   └── storage.h           
-│
-├── src/                    
-│   ├── main.c              
-│   ├── database.c          
-│   ├── parser.c            
-│   └── storage.c           
-│
-├── data/                   
-│   └── database.db
-│
-├── build/                  
-│
-├── .gitignore              
-├── makefile                
-└── README.md     
+```text
+mini_database/
+├── include/
+│   ├── database.h
+│   ├── parser.h
+│   ├── protocol.h
+│   └── storage.h
+├── src/
+│   ├── database.c
+│   ├── db_client.c
+│   ├── db_server.c
+│   ├── parser.c
+│   ├── server.c
+│   └── storage.c
+├── makefile
+├── README.md
+└── database.db
 ```
 
-Each module has a specific responsibility:
+## Build And Run
 
-* **main.c** → program entry point and CLI loop
-* **parser** → parses user input into commands
-* **database** → handles database logic
-* **storage** → manages file persistence
+Build both binaries:
 
----
+```bash
+make
+```
 
-# Command to run the project
-make run 
+Run server:
 
+```bash
+make run-server
+```
 
-# Features
+Run client (in a second terminal):
 
-* command-line interface
-* `insert` command
-* `select` command
-* `delete` command
-* persistent file storage
-* modular C architecture
-* basic indexing future improvement
+```bash
+make run-client
+```
 
----
+Clean binaries:
 
-# Learning Objectives
+```bash
+make clean
+```
 
-This project is built to practice:
+## Notes
 
-* C programming
-* struct and enum usage
-* pointers
-* modular code design
-* file I/O
-* basic database internals
+- Current protocol is plain text over TCP.
+- `select` and `select <id>` results are sent by the server and displayed on the client side.
+- The project is educational and not production-hardened yet.

@@ -9,7 +9,7 @@
 #define MSG_UPDATED "Row %d updated\n"
 #define MSG_IO_ERROR "I/O error while accessing database file\n"
 
-static void print_row(const Row* row);
+static void send_row(const Row* row, int output_fd);
 /* Execute validated statements against the persisted row store. */
 
 void executeInsert(Table* table, const Statement* statement)
@@ -33,30 +33,30 @@ void executeInsert(Table* table, const Statement* statement)
     }
 }
 
-void executeSelect(Table* table)
+void executeSelect(Table* table, int output_fd)
 {
     Row row;
 
     for (uint32_t i = 0; i < table->num_rows; i++) {
         if (!read_row(table, i, &row)) {
-            printf(MSG_IO_ERROR);
+            dprintf(output_fd, MSG_IO_ERROR);
             return;
         }
         if (!row.is_deleted) {
-            print_row(&row);
+            send_row(&row, output_fd);
         }
     }
 }
 
-void executeSelectOne(Table* table, int id)
+void executeSelectOne(Table* table, int id, int output_fd)
 {
     Row row;
     
     if (find_active_row_by_id(table, id, &row, NULL))
     {
-        print_row(&row);
+        send_row(&row, output_fd);
     } else {
-        printf(MSG_NOT_FOUND, id);
+        dprintf(output_fd, MSG_NOT_FOUND, id);
     }
 }
 
@@ -98,7 +98,7 @@ void executeUpdate(Table* table, int id, const char* new_name, int new_age)
  * ========================
  */
 
-static void print_row(const Row* row)
+static void send_row(const Row* row, int output_fd)
 {
-    printf("%d %s %d\n", row->id, row->username, row->age);
+    dprintf(output_fd, "%d %s %d\n", row->id, row->username, row->age);
 }

@@ -9,3 +9,6 @@ mydb
 
 # macOS
 .DS_Store
+
+db_server 
+db_client
