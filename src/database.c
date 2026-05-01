@@ -8,6 +8,7 @@
 #define MSG_NOT_FOUND "No row with id %u found\n"
 #define MSG_UPDATED "Row %u updated\n"
 #define MSG_IO_ERROR "I/O error while accessing database file\n"
+#define MATCH_SIZE 3
 
 static void send_row_full(const Row* row, int output_fd);
 static void send_row(const Row* row, int output_fd);
@@ -92,26 +93,38 @@ void executeUpdate(Table* table, uint32_t id, const float* new_vector)
 
 void executeSearch(Table* table, const float* query_vector, int conn_fd) {
     Row row;
-    float min_dist = INFINITY;
-    uint32_t best_id = 0;
-    int found = 0;
+    Match results[MATCH_SIZE];
+    for (size_t i = 0; i < MATCH_SIZE; i++) {
+        results[i].distance = INFINITY;
+        results[i].id = 0;
+    }
 
     for (uint32_t i = 0; i < table->num_rows; i++) {
         if (read_row(table, i, &row) && !row.is_deleted) {
             float dist = calculateDistance(query_vector, row.vector);
 
-            if (dist < min_dist) {
-                min_dist = dist;
-                best_id = row.id;
-                found = 1;
+            if (dist < results[MATCH_SIZE-1].distance) {
+                results[MATCH_SIZE-1].distance = dist;
+                results[MATCH_SIZE-1].id = row.id;
+
+                for (int j = MATCH_SIZE - 1; j > 0; j--) {
+                    if (results[j].distance < results[j-1].distance) {
+                        Match temp = results[j];
+                        results[j] = results[j-1];
+                        results[j-1] = temp;
+                    } else {
+                        break;
+                    }
+                }
             }
         }
     }   
-    if (found) {
-        dprintf(conn_fd, "Closest match: ID %u (Distance: %.4f)\n", best_id, min_dist);
-    } else {
-        dprintf(conn_fd, "No data found.\n");
+    dprintf(conn_fd, "--- Top Search Results ---\n");
+    for (int i = 0; i < MATCH_SIZE; i++) {
+        if (results[i].distance == INFINITY) continue;
+        dprintf(conn_fd, "%d. ID %u (Distance: %.4f)\n", i + 1, results[i].id, results[i].distance);
     }
+    dprintf(conn_fd, "<END>\n");
 }
 
 
@@ -133,13 +146,13 @@ float calculateDistance(const float* v1, const float* v2) {
 
 static void send_row(const Row* row, int output_fd)
 {
-    printf("ID: %u | Vector: [", row->id);
+    dprintf(output_fd, "ID: %u | Vector: [", row->id);
     
     if (DIMENSION > 6) {
         for (int i = 0; i < 3; i++) {
             dprintf(output_fd, "%.2f%s", row->vector[i], ", ");
         }
-        printf("... , ");
+        dprintf(output_fd, "... , ");
         for (int i = DIMENSION - 3; i < DIMENSION; i++) {
             dprintf(output_fd, "%.2f%s", row->vector[i], (i == DIMENSION - 1) ? "" : ", ");
         }

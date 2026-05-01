@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-# define DIMENSION 2
+# define DIMENSION 384
 
 /* Database row persisted to disk. */
 typedef struct {

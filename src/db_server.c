@@ -11,7 +11,7 @@
 #include "storage.h"
 #include "protocol.h"
 
-#define INPUT_BUFFER_SIZE 4096
+#define INPUT_BUFFER_SIZE 16384
 #define RESPONSE_END_MARKER "<END>\n"
 
 static int setup_server_socket(void);
@@ -136,6 +136,7 @@ static void execute_statement(Table* table, const Statement* statement, int conn
         break;
     case SEARCH:
         executeSearch(table, statement->row.vector, conn_fd);
+        break;
     default:
         (void)send_text(conn_fd, "Invalid command\n");
         (void)send_response_end(conn_fd);

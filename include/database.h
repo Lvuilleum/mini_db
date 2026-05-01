@@ -1,6 +1,13 @@
 #include "parser.h"
 #include "storage.h"
 
+
+
+typedef struct {
+    uint32_t id;
+    float distance;
+} Match;
+
 /* Database command executors. */
 void executeInsert(Table* table, const Statement* statement);
 
