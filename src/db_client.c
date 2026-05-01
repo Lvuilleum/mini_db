@@ -17,11 +17,11 @@
 static void print_help(void)
 {
     printf("Availables commands:\n");
-    printf("  insert <id> <username> <age>\n");
+    printf("  insert <id> v1 v2 ... v128\n");
     printf("  select\n");
     printf("  select <id>\n");
     printf("  delete <id>\n");
-    printf("  update <id> <username> <age>\n");
+    printf("  update <id> v1 v2 ... v128\n");
     printf("  help or .help\n");
     printf("  .exit\n");
 }
@@ -112,15 +112,19 @@ int main(void)
             continue;
         }
 
-        // network part 
+
+        // network part
+        // 5. Send to the server what the client has write  
         if ((send(sockfd, input, strlen(input), 0)) < 0) {
             perror("send failed");
             exit(EXIT_FAILURE);
         }
 
+        // 6. Read the response of the server 
         read_response(sockfd);
     }
 
+    // 7. Close the socket 
     close(sockfd);
     return 0;
 }

@@ -26,7 +26,7 @@ typedef struct {
 } Pager;
 
 typedef struct {
-    int key;
+    uint32_t key;
     uint32_t row_num;
     uint8_t state; /* 0 = empty, 1 = occupied, 2 = deleted */
 } IndexEntry;
@@ -60,16 +60,16 @@ int write_row(Table* table, const Row* row);
 int read_row(Table* table, uint32_t row_num, Row* row);
 
 /* Mark a row as deleted using id. */
-int delete_row(Table* table, int id);
+int delete_row(Table* table, uint32_t id);
 
 /* Return non-zero if an active row with id exists. */
-int id_exists(Table* table, int id);
+int id_exists(Table* table, uint32_t id);
 
 /* Return the number of active (non-deleted) rows in the file. */
 int count_active_rows(Table* table);
 
 /* Find one active row by id and optionally return its file index. */
-int find_active_row_by_id(Table* table, int id, Row* out_row, uint32_t* out_index);
+int find_active_row_by_id(Table* table, uint32_t id, Row* out_row, uint32_t* out_index);
 
 /* Overwrite one row at a known file index. */
 int write_row_at(Table* table, uint32_t row_num, const Row* row);

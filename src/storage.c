@@ -22,14 +22,14 @@ static void* get_page(Pager* pager, uint32_t page_num);
 static int pager_flush(Pager* pager, uint32_t page_num, uint32_t size);
 static void pager_close(Pager* pager);
 static void* row_slot(Table* table, uint32_t row_num);
-static int find_row_index(Table* table, int id, Row* out_row, uint32_t* out_index);
+static int find_row_index(Table* table, uint32_t id, Row* out_row, uint32_t* out_index);
 static uint32_t next_power_of_two(uint32_t value);
-static uint32_t hash_int(int key);
+static uint32_t hash_uint32(uint32_t key);
 static int index_init(Table* table);
 static void index_free(Table* table);
-static int index_get_row_num(Table* table, int id, uint32_t* out_row_num);
-static int index_put_row_num(Table* table, int id, uint32_t row_num);
-static void index_remove(Table* table, int id);
+static int index_get_row_num(Table* table, uint32_t id, uint32_t* out_row_num);
+static int index_put_row_num(Table* table, uint32_t id, uint32_t row_num);
+static void index_remove(Table* table, uint32_t id);
 static int index_rebuild(Table* table);
 
 
@@ -118,6 +118,10 @@ IndexEntry* get_index_entry_ptr(Table* table, uint32_t slot)
 int write_row(Table* table, const Row* row)
 {
     void* destination;
+    uint32_t row_num;
+    uint32_t page_num;
+    uint32_t row_offset;
+    uint32_t flush_size;
 
     if (table->num_rows >= MAX_ROWS) {
         return 0;
@@ -132,6 +136,16 @@ int write_row(Table* table, const Row* row)
     if (!row->is_deleted && !index_put_row_num(table, row->id, table->num_rows)) {
         return 0;
     }
+    /* Flush the affected page to disk so data persists immediately */
+    row_num = table->num_rows;
+    page_num = row_num / ROWS_PER_PAGE;
+    row_offset = row_num % ROWS_PER_PAGE;
+    flush_size = (row_offset + 1) * ROW_SIZE;
+
+    if (!pager_flush(table->pager, page_num, flush_size)) {
+        return 0;
+    }
+
     table->num_rows++;
     return 1;
 }
@@ -186,10 +200,16 @@ int write_row_at(Table* table, uint32_t row_num, const Row* row)
         return 0;
     }
 
+    /* Flush the full page containing this row */
+    uint32_t page_num = row_num / ROWS_PER_PAGE;
+    if (!pager_flush(table->pager, page_num, PAGE_SIZE)) {
+        return 0;
+    }
+
     return 1;
 }
 
-int delete_row(Table* table, int id)
+int delete_row(Table* table, uint32_t id)
 {
     Row row;
     uint32_t index;
@@ -202,7 +222,7 @@ int delete_row(Table* table, int id)
     return write_row_at(table, index, &row);
 }
 
-int id_exists(Table* table, int id)
+int id_exists(Table* table, uint32_t id)
 {
     uint32_t row_num;
     return index_get_row_num(table, id, &row_num);
@@ -226,7 +246,7 @@ int count_active_rows(Table* table)
     return count;
 }
 
-int find_active_row_by_id(Table* table, int id, Row* out_row, uint32_t* out_index)
+int find_active_row_by_id(Table* table, uint32_t id, Row* out_row, uint32_t* out_index)
 {
     return find_row_index(table, id, out_row, out_index);
 }
@@ -335,6 +355,18 @@ static int pager_flush(Pager* pager, uint32_t page_num, uint32_t size)
         return 0;
     }
 
+    /* Update file length if we extended the file */
+    off_t end_pos = offset + (off_t)size;
+    if ((uint32_t)end_pos > pager->file_length) {
+        pager->file_length = (uint32_t)end_pos;
+    }
+
+    /* Ensure data is committed to disk */
+    if (fsync(pager->file_descriptor) == -1) {
+        perror("fsync");
+        return 0;
+    }
+
     return 1;
 }
 
@@ -362,7 +394,7 @@ static void* row_slot(Table* table, uint32_t row_num)
     return (char*)page + byte_offset;
 }
 
-static int find_row_index(Table* table, int id, Row* out_row, uint32_t* out_index)
+static int find_row_index(Table* table, uint32_t id, Row* out_row, uint32_t* out_index)
 {
     Row row;
     uint32_t row_num;
@@ -399,9 +431,9 @@ static uint32_t next_power_of_two(uint32_t value)
     return result;
 }
 
-static uint32_t hash_int(int key)
+static uint32_t hash_uint32(uint32_t key)
 {
-    uint32_t x = (uint32_t)key;
+    uint32_t x = key;
 
     x ^= x >> 16;
     x *= 0x7feb352dU;
@@ -444,7 +476,7 @@ static void index_free(Table* table)
     table->id_index_capacity = 0;
 }
 
-static int index_get_row_num(Table* table, int id, uint32_t* out_row_num)
+static int index_get_row_num(Table* table, uint32_t id, uint32_t* out_row_num)
 {
     uint32_t mask;
     uint32_t slot;
@@ -455,7 +487,7 @@ static int index_get_row_num(Table* table, int id, uint32_t* out_row_num)
     }
 
     mask = table->id_index_capacity - 1;
-    slot = hash_int(id) & mask;
+    slot = hash_uint32(id) & mask;
 
     for (probes = 0; probes < table->id_index_capacity; probes++) {
         IndexEntry* entry = &table->id_index[slot];
@@ -475,7 +507,7 @@ static int index_get_row_num(Table* table, int id, uint32_t* out_row_num)
     return 0;
 }
 
-static int index_put_row_num(Table* table, int id, uint32_t row_num)
+static int index_put_row_num(Table* table, uint32_t id, uint32_t row_num)
 {
     uint32_t mask;
     uint32_t slot;
@@ -487,7 +519,7 @@ static int index_put_row_num(Table* table, int id, uint32_t row_num)
     }
 
     mask = table->id_index_capacity - 1;
-    slot = hash_int(id) & mask;
+    slot = hash_uint32(id) & mask;
 
     for (probes = 0; probes < table->id_index_capacity; probes++) {
         IndexEntry* entry = &table->id_index[slot];
@@ -522,7 +554,7 @@ static int index_put_row_num(Table* table, int id, uint32_t row_num)
     return 0;
 }
 
-static void index_remove(Table* table, int id)
+static void index_remove(Table* table, uint32_t id)
 {
     uint32_t mask;
     uint32_t slot;
@@ -533,7 +565,7 @@ static void index_remove(Table* table, int id)
     }
 
     mask = table->id_index_capacity - 1;
-    slot = hash_int(id) & mask;
+    slot = hash_uint32(id) & mask;
 
     for (probes = 0; probes < table->id_index_capacity; probes++) {
         IndexEntry* entry = &table->id_index[slot];

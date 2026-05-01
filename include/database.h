@@ -6,6 +6,8 @@ void executeInsert(Table* table, const Statement* statement);
 
 
 void executeSelect(Table* table, int output_fd);
-void executeSelectOne(Table* table, int id, int output_fd);
-void executeDelete(Table* table, int id);
-void executeUpdate(Table* table, int id, const char* new_name, int new_age);
+void executeSelectOne(Table* table, uint32_t id, int output_fd);
+void executeDelete(Table* table, uint32_t id);
+void executeUpdate(Table* table, uint32_t id, const float* new_vector);
+void executeSearch(Table* table, const float* query_vector, int conn_fd);
+float calculateDistance(const float* v1, const float* v2);

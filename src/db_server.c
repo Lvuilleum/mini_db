@@ -11,7 +11,7 @@
 #include "storage.h"
 #include "protocol.h"
 
-#define INPUT_BUFFER_SIZE 1024
+#define INPUT_BUFFER_SIZE 4096
 #define RESPONSE_END_MARKER "<END>\n"
 
 static int setup_server_socket(void);
@@ -24,6 +24,7 @@ int main(void)
 {
     int conn_fd;
     struct sockaddr_in client_addr;
+
     int sockfd = setup_server_socket();
 
     Table* table = db_open("database.db");
@@ -50,6 +51,13 @@ int main(void)
     return 0;
 }
 
+
+
+/**
+ * ==================
+ * HELPER FUNCTIONS
+ * ==================
+ */
 static int setup_server_socket(void)
 {
     int sockfd;
@@ -122,10 +130,12 @@ static void execute_statement(Table* table, const Statement* statement, int conn
         (void)send_response_end(conn_fd);
         break;
     case UPDATE:
-        executeUpdate(table, statement->row.id, statement->row.username, statement->row.age);
+        executeUpdate(table, statement->row.id, statement->row.vector);
         (void)send_text(conn_fd, "updated with success\n");
         (void)send_response_end(conn_fd);
         break;
+    case SEARCH:
+        executeSearch(table, statement->row.vector, conn_fd);
     default:
         (void)send_text(conn_fd, "Invalid command\n");
         (void)send_response_end(conn_fd);
@@ -143,10 +153,14 @@ static void handle_client(int conn_fd, Table* table)
         ParseResult parse_result;
 
         input[n] = '\0';
+        /* Debug: print raw received input to diagnose parse failures */
+        fprintf(stderr, "DEBUG_RECV(%zd): %s\n", n, input);
+        fflush(stderr);
         parse_result = parse(input, &statement);
 
         if (parse_result != PARSE_OK) {
             (void)send_text(conn_fd, "Syntax error\n");
+            (void)send_response_end(conn_fd);
             continue;
         }
 

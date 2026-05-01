@@ -1,12 +1,13 @@
 #pragma once
 
-# define MAX_USERNAME 32 
+#include <stdint.h>
+
+# define DIMENSION 2
 
 /* Database row persisted to disk. */
 typedef struct {
-    int id;
-    char username[MAX_USERNAME];
-    int age;
+    uint32_t id;
+    float vector[DIMENSION];
     int is_deleted; /* 0 = active, 1 = deleted */
 } Row;
 
@@ -16,7 +17,8 @@ typedef enum {
     SELECTONE,
     INSERT,
     DELETE,
-    UPDATE
+    UPDATE,
+    SEARCH
 } StatementType;
 
 typedef struct {
@@ -39,3 +41,4 @@ int insertParse(Statement* statement);
 int deleteParse(Statement* statement);
 int updateParse(Statement* statement);
 int parse_select(Statement* statement);
+int searchParse(Statement* statement);
