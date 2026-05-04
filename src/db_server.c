@@ -20,7 +20,7 @@ static int send_text(int conn_fd, const char* msg);
 static int send_response_end(int conn_fd);
 static void execute_statement(Table* table, const Statement* statement, int conn_fd);
 static void handle_client(int conn_fd, Table* table);
-
+static void* client_thread_handler(void* arg);
 int main(void)
 {
     int conn_fd;
