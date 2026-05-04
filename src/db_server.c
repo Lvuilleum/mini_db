@@ -36,13 +36,12 @@ int main(void)
         conn_fd = accept(sockfd, (struct sockaddr*)&client_addr, &addr_len);
         if (conn_fd < 0) {
             perror("accept");
-            exit(EXIT_FAILURE);
+            continue;
         }
 
         printf("Client connected\n");
 
         handle_client(conn_fd, table);
-
         printf("client disconnected\n");
         close(conn_fd);
     }
@@ -136,6 +135,7 @@ static void execute_statement(Table* table, const Statement* statement, int conn
         break;
     case SEARCH:
         executeSearch(table, statement->row.vector, conn_fd);
+        (void)send_response_end(conn_fd);
         break;
     default:
         (void)send_text(conn_fd, "Invalid command\n");

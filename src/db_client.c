@@ -17,18 +17,19 @@
 static void print_help(void)
 {
     printf("Availables commands:\n");
-    printf("  insert <id> v1 v2 ... v128\n");
+    printf("  insert <id> v1 v2 ... v384\n");
     printf("  select\n");
     printf("  select <id>\n");
     printf("  delete <id>\n");
-    printf("  update <id> v1 v2 ... v128\n");
+    printf("  update <id> v1 v2 ... v384\n");
+    printf("  search v1 v2 ... v384\n");
     printf("  help or .help\n");
     printf("  .exit\n");
 }
 
 static void read_response(int sockfd)
 {
-    char response[2048];
+    char response[4096];
     size_t used = 0;
 
     while (1) {
@@ -37,14 +38,14 @@ static void read_response(int sockfd)
             used += (size_t)n;
             response[used] = '\0';
 
-            if (strstr(response, RESPONSE_END_MARKER) != NULL) {
-                char* marker = strstr(response, RESPONSE_END_MARKER);
+            char* marker = strstr(response, RESPONSE_END_MARKER);
+            if (marker != NULL) {
                 *marker = '\0';
                 printf("%s", response);
                 return;
             }
 
-            if (used == sizeof(response) - 1) {
+            if (used >= sizeof(response) - 1) {
                 printf("%s", response);
                 used = 0;
             }

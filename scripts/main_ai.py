@@ -1,9 +1,12 @@
-import socket 
-from sentence_transformers import SentenceTransformer 
+import socket
+import json
+import os
+from sentence_transformers import SentenceTransformer
 
-MODEL_NAME = 'all-MiniLM-L6-v2' 
+MODEL_NAME = 'all-MiniLM-L6-v2'
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 8080
+METADATA_FILE = 'scripts/metadata.json' # Fichier où on va stocker les phrases
 
 print("Chargement du modèle d'IA...")
 model = SentenceTransformer(MODEL_NAME)
@@ -22,22 +25,59 @@ def send_to_db(command):
             if "<END>" in full_response: 
                 break
         
-        print(full_response.replace("<END>", ""))
+        # MODIFICATION : On fait un "return" au lieu d'un "print"
+        return full_response.replace("<END>", "")
 
-
-def insert_text(id, text):
+def insert_text(doc_id, text):
     # Transformation de la phrase en vecteur
     vector = model.encode(text)
-    # Transformation du vecteur en chaîne de caractères pour ton serveur C
     vector_str = " ".join(map(str, vector))
-    command = f"insert {id} {vector_str}"
+    command = f"insert {doc_id} {vector_str}"
+    
+    # On envoie au C
     send_to_db(command)
+    
+    # NOUVEAU : On sauvegarde le texte en Python
+    metadata = {}
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            metadata = json.load(f)
+            
+    metadata[str(doc_id)] = text # On associe l'ID au texte
+    
+    with open(METADATA_FILE, 'w') as f:
+        json.dump(metadata, f, indent=4)
+        
+    print(f"Inséré -> ID {doc_id} : '{text}'")
 
 def search_text(text):
     vector = model.encode(text)
     vector_str = " ".join(map(str, vector))
     command = f"search {vector_str}"
-    send_to_db(command)
+    
+    # On récupère la réponse du C (qui contient les IDs)
+    response = send_to_db(command)
+    print(response) # On affiche ce que le C a répondu
+    
+    # NOUVEAU : On traduit les IDs en texte
+    metadata = {}
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            metadata = json.load(f)
+            
+    print("--- Traduction des résultats ---")
+    for line in response.split('\n'):
+        # On ne traite que les lignes qui commencent par un chiffre (ex: "1. ID 2")
+        if "ID " in line:
+            try:
+                # On isole l'ID plus proprement
+                parts = line.split("ID ")
+                found_id = parts[1].split(" ")[0].strip()
+                
+                phrase = metadata.get(found_id, "Texte généré par le stress test (non indexé)")
+                print(f"-> {line} | Phrase: {phrase}")
+            except:
+                continue
 
 # --- TEST ---
 # 1. On insère des connaissances
@@ -45,6 +85,5 @@ insert_text(1, "Le ciel est bleu et le soleil brille")
 insert_text(2, "La recette des crêpes demande du lait et de la farine")
 
 # 2. On fait une recherche sémantique
-# Note : on ne cherche pas les mêmes mots, mais le même SENS
 print("\nRecherche pour : 'Comment faire de la cuisine ?'")
 search_text("Comment faire de la cuisine ?")

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #include "database.h"
 #include "parser.h"
 #include "storage.h"
@@ -99,6 +100,9 @@ void executeSearch(Table* table, const float* query_vector, int conn_fd) {
         results[i].id = 0;
     }
 
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start); // Top chrono
+
     for (uint32_t i = 0; i < table->num_rows; i++) {
         if (read_row(table, i, &row) && !row.is_deleted) {
             float dist = calculateDistance(query_vector, row.vector);
@@ -119,6 +123,13 @@ void executeSearch(Table* table, const float* query_vector, int conn_fd) {
             }
         }
     }   
+    clock_gettime(CLOCK_MONOTONIC, &end); // Fin du chrono
+
+    double diff = (end.tv_sec - start.tv_sec) * 1000.0 + 
+                  (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+    dprintf(conn_fd, "Search completed in %.3f ms\n", diff);
+    
     dprintf(conn_fd, "--- Top Search Results ---\n");
     for (int i = 0; i < MATCH_SIZE; i++) {
         if (results[i].distance == INFINITY) continue;

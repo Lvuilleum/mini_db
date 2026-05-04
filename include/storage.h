@@ -4,7 +4,7 @@
 #include "parser.h"
 
 #define PAGE_SIZE 4096
-#define TABLE_MAX_PAGES 100
+#define TABLE_MAX_PAGES 10000
 #define ROWS_PER_PAGE (PAGE_SIZE / sizeof(Row))
 #define MAX_ROWS (ROWS_PER_PAGE * TABLE_MAX_PAGES)
 #define HEADER_PAGE 0
