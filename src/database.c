@@ -17,6 +17,7 @@ static void send_row(const Row* row, int output_fd);
 
 void executeInsert(Table* table, const Statement* statement)
 {
+    pthread_mutex_lock(&table->lock);
     Row row_to_write;
 
     if (count_active_rows(table) >= (int)MAX_ROWS) {
@@ -31,9 +32,11 @@ void executeInsert(Table* table, const Statement* statement)
 
     row_to_write = statement->row;
     row_to_write.is_deleted = 0;
+
     if (!write_row(table, &row_to_write)) {
         printf(MSG_IO_ERROR);
     }
+    pthread_mutex_unlock(&table->lock);
 }
 
 void executeSelect(Table* table, int output_fd)

@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #include "parser.h"
 #include "database.h"
@@ -31,6 +32,7 @@ int main(void)
 
     printf("Serveur available on port %d\n", PORT);
 
+    // Multithreading, when accept, look for the next client 
     while (1) {
         socklen_t addr_len = sizeof(client_addr);
         conn_fd = accept(sockfd, (struct sockaddr*)&client_addr, &addr_len);
@@ -39,11 +41,19 @@ int main(void)
             continue;
         }
 
-        printf("Client connected\n");
+        printf("New client connected, spawning thread...\n");
 
-        handle_client(conn_fd, table);
-        printf("client disconnected\n");
-        close(conn_fd);
+        thread_args_t* args = malloc(sizeof(thread_args_t));
+        args->conn_fd = conn_fd;
+        args->table = table;
+
+        pthread_t thread_id;
+        if (pthread_create(&thread_id, NULL, client_thread_handler, (void*)args) != 0) {
+            perror("Thread create");
+            close(conn_fd);
+            free(args);
+        }
+        pthread_detach(thread_id);
     }
 
     db_close(table);
@@ -167,4 +177,19 @@ static void handle_client(int conn_fd, Table* table)
 
         execute_statement(table, &statement, conn_fd);
     }
+}
+
+static void* client_thread_handler(void* arg) {
+    thread_args_t* args = (thread_args_t*)arg;
+
+    int fd = args->conn_fd;
+    Table* table = args->table;
+
+    handle_client(fd, table);
+
+    printf("Thread: client disconnected\n");
+    close(fd);
+    free(args);
+
+    return NULL; 
 }

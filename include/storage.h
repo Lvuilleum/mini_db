@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <pthread.h>
 #include "parser.h"
 
 #define PAGE_SIZE 4096
@@ -36,6 +37,7 @@ typedef struct {
     uint32_t num_rows;
     IndexEntry* id_index;
     uint32_t id_index_capacity;
+    pthread_mutex_t lock;
 } Table;
 
 typedef struct {

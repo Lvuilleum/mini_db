@@ -45,6 +45,12 @@ Table* db_open(const char* filename)
         exit(EXIT_FAILURE);
     }
 
+    if (pthread_mutex_init(&table->lock, NULL) != 0) {
+        perror("pthread_mutex_init");
+        pager_close(pager);
+        exit(EXIT_FAILURE);
+    }
+
     table->pager = pager;
     table->num_rows = pager->file_length / ROW_SIZE;
 
@@ -60,6 +66,7 @@ Table* db_open(const char* filename)
         free(table);
         exit(EXIT_FAILURE);
     }
+    
 
     return table;
 }
@@ -101,6 +108,7 @@ void db_close(Table* table)
 
     pager_close(table->pager);
     index_free(table);
+    pthread_mutex_destroy(&table->lock);
     free(table);
 }
 
