@@ -1,12 +1,15 @@
 import socket
 import json
 import os
+import re
+from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 MODEL_NAME = 'all-MiniLM-L6-v2'
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 8080
 METADATA_FILE = 'scripts/metadata.json' # Fichier où on va stocker les phrases
+TEXT_FILE = Path(__file__).resolve().parent.parent / 'book.txt'
 
 print("Chargement du modèle d'IA...")
 model = SentenceTransformer(MODEL_NAME)
@@ -79,10 +82,36 @@ def search_text(text):
             except:
                 continue
 
+def load_phrases_from_txt(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+
+    phrases = []
+    for block in content.splitlines():
+        block = block.strip()
+        if not block:
+            continue
+
+        parts = re.split(r'(?<=[.!?])\s+', block)
+        for phrase in parts:
+            phrase = phrase.strip()
+            if phrase:
+                phrases.append(phrase)
+
+    return phrases
+
 # --- TEST ---
 # 1. On insère des connaissances
-insert_text(1, "Le ciel est bleu et le soleil brille")
-insert_text(2, "La recette des crêpes demande du lait et de la farine")
+# insert_text(1, "Le ciel est bleu et le soleil brille")
+# insert_text(2, "La recette des crêpes demande du lait et de la farine")
+if not TEXT_FILE.exists():
+    raise FileNotFoundError(f"Fichier introuvable: {TEXT_FILE}")
+
+for idx, phrase in enumerate(load_phrases_from_txt(TEXT_FILE), start=1):
+    if idx > 5000:
+        break
+    insert_text(idx, phrase)
+
 
 # 2. On fait une recherche sémantique
 print("\nRecherche pour : 'Comment faire de la cuisine ?'")

@@ -43,7 +43,7 @@ The `main_ai.py` script allows natural language interaction with the database:
 
 Tested on a database of **10,000 high-dimensional vectors** (384-d):
 
-*   **Core Search Time (C Engine):** ~20.32 ms
+*   **Core Search Time (C Engine, using 5 threads):** ~12.19 ms 
 *   **Total Latency (Python + Network + C):** ~23.63 ms
 *   **Throughput:** ~500,000 vector comparisons per second.
 

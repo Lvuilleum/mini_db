@@ -28,7 +28,7 @@ int main(void)
 
     int sockfd = setup_server_socket();
 
-    Table* table = db_open("database.db");
+    Table* table = db_open("data.db");
 
     printf("Serveur available on port %d\n", PORT);
 

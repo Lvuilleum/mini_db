@@ -8,6 +8,18 @@ typedef struct {
     float distance;
 } Match;
 
+typedef struct {
+    Table* table;
+    const float* query_vector;
+    uint32_t start_row;
+    uint32_t end_row;
+    // Résultats locaux du thread
+    int local_top_ids[3];
+    float local_top_distances[3];
+} search_worker_args_t;
+
+
+
 /* Database command executors. */
 void executeInsert(Table* table, const Statement* statement);
 

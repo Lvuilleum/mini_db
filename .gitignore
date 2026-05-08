@@ -12,3 +12,6 @@ mydb
 
 db_server 
 db_client
+
+# text file 
+*.txt

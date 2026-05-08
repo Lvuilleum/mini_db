@@ -1,6 +1,6 @@
 # Variables
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -Iinclude
+CFLAGS = -Wall -Wextra -Werror -Iinclude -lpthread
 HEADERS = $(wildcard include/*.h)
 
 # Fichiers sources partagés (utilisés par le serveur et potentiellement le client)
