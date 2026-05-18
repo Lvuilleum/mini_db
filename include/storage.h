@@ -11,6 +11,12 @@
 #define HEADER_PAGE 0
 #define DATA_PAGES_RESERVED 100
 #define INDEX_START_PAGE (DATA_PAGES_RESERVED + 1)
+#define ROW_SIZE ((uint32_t)sizeof(Row))
+#define INDEX_EMPTY 0
+#define INDEX_OCCUPIED 1
+#define INDEX_DELETED 2
+#define INDEX_LOAD_FACTOR_NUM 7
+#define INDEX_LOAD_FACTOR_DEN 10
 
 /**
  * We will have 3 zones : 

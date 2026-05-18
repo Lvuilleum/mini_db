@@ -10,13 +10,6 @@
 
 #include "storage.h"
 
-#define ROW_SIZE ((uint32_t)sizeof(Row))
-#define INDEX_EMPTY 0
-#define INDEX_OCCUPIED 1
-#define INDEX_DELETED 2
-#define INDEX_LOAD_FACTOR_NUM 7
-#define INDEX_LOAD_FACTOR_DEN 10
-
 static Pager* pager_open(const char* filename);
 static void* get_page(Pager* pager, uint32_t page_num);
 static int pager_flush(Pager* pager, uint32_t page_num, uint32_t size);

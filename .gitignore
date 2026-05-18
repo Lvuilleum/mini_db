@@ -15,3 +15,12 @@ db_client
 
 # text file 
 *.txt
+
+# metada.json
+metadata.json
+
+# Vscode config
+.Vscode/
+
+#pycache
+*.pyc

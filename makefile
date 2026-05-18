@@ -14,6 +14,7 @@ CLIENT_SRC = src/db_client.c $(COMMON_SRC)
 SERVER_TARGET = db_server
 CLIENT_TARGET = db_client
 
+
 # Règle par défaut : on compile les deux
 all: $(SERVER_TARGET) $(CLIENT_TARGET)
 
@@ -34,6 +35,6 @@ run-client: $(CLIENT_TARGET)
 	./$(CLIENT_TARGET)
 
 clean:
-	rm -f $(SERVER_TARGET) $(CLIENT_TARGET)
+	rm -f $(SERVER_TARGET) $(CLIENT_TARGET)  
 
 .PHONY: all clean run-server run-client

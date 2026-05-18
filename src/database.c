@@ -6,16 +6,16 @@
 #include "parser.h"
 #include "storage.h"
 
-#define MSG_NOT_FOUND "No row with id %u found\n"
-#define MSG_UPDATED "Row %u updated\n"
-#define MSG_IO_ERROR "I/O error while accessing database file\n"
-#define MATCH_SIZE 3
-#define THREAD_NUMBER 1
-
-static void send_row_full(const Row* row, int output_fd);
-static void send_row(const Row* row, int output_fd);
+/* Forward declarations */
+static void send_row(const Row* row, int output_fd, int full_vector);
 static void* search_worker(void* arg);
-/* Execute validated statements against the persisted row store. */
+static void swap_matches(Match* array, int i);
+static void insert_match_in_sorted_array(Match* array, float distance, uint32_t id);
+static void merge_thread_results(Match* final_results, const Match* thread_results);
+
+/* ============================================
+ * PUBLIC DATABASE OPERATIONS
+ * ============================================ */
 
 void executeInsert(Table* table, const Statement* statement)
 {
@@ -51,7 +51,7 @@ void executeSelect(Table* table, int output_fd)
             return;
         }
         if (!row.is_deleted) {
-            send_row(&row, output_fd);
+            send_row(&row, output_fd, 0);
         }
     }
 }
@@ -60,9 +60,8 @@ void executeSelectOne(Table* table, uint32_t id, int output_fd)
 {
     Row row;
     
-    if (find_active_row_by_id(table, id, &row, NULL))
-    {
-        send_row_full(&row, output_fd);
+    if (find_active_row_by_id(table, id, &row, NULL)) {
+        send_row(&row, output_fd, 1);
     } else {
         dprintf(output_fd, MSG_NOT_FOUND, id);
     }
@@ -97,139 +96,72 @@ void executeUpdate(Table* table, uint32_t id, const float* new_vector)
     }
 }
 
-void executeSearch(Table* table, const float* query_vector, int conn_fd) {
-    printf("num_rows = %u, THREAD_NUMBER = %d\n", table->num_rows, THREAD_NUMBER);
-    if (table->num_rows == 0) return;
-    
+void executeSearch(Table* table, const float* query_vector, int conn_fd)
+{
+    if (table->num_rows == 0) {
+        return;
+    }
+
+    /* Initialize thread arguments */
     pthread_t threads[THREAD_NUMBER];
     search_worker_args_t args[THREAD_NUMBER];
-    
-    int advance = (table->num_rows + THREAD_NUMBER - 1) / THREAD_NUMBER;
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    int rows_per_thread = (table->num_rows + THREAD_NUMBER - 1) / THREAD_NUMBER;
 
-    for (size_t i = 0; i < THREAD_NUMBER; i++) {
+    for (int i = 0; i < THREAD_NUMBER; i++) {
         args[i].table = table;
         args[i].query_vector = query_vector;
-        args[i].start_row = i * advance;
-        args[i].end_row = (i+1) * advance;
-        if (args[i].end_row > table->num_rows) args[i].end_row = table->num_rows;
+        args[i].start_row = i * rows_per_thread;
+        args[i].end_row = (i + 1 < THREAD_NUMBER) ? (i + 1) * rows_per_thread : table->num_rows;
 
         if (pthread_create(&threads[i], NULL, search_worker, &args[i]) != 0) {
             perror("pthread_create");
         }
     }
 
-    for (size_t i = 0; i < THREAD_NUMBER; i++) {
+    /* Wait for all threads to complete */
+    for (int i = 0; i < THREAD_NUMBER; i++) {
         pthread_join(threads[i], NULL);
     }
 
+    /* Merge results from all threads */
     Match final_results[MATCH_SIZE];
     for (int i = 0; i < MATCH_SIZE; i++) {
         final_results[i].distance = INFINITY;
         final_results[i].id = 0;
     }
 
-    for (size_t i = 0; i < THREAD_NUMBER; i++) {
-        for (size_t j = 0; j < MATCH_SIZE; j++) {
-            float dist = args[i].local_top_distances[j];
-            uint32_t id = args[i].local_top_ids[j];
-
-            if (dist == INFINITY) continue;
-
-            if (dist < final_results[MATCH_SIZE - 1].distance) {
-                final_results[MATCH_SIZE - 1].distance = dist;
-                final_results[MATCH_SIZE - 1].id = id;
-
-                for (int k = MATCH_SIZE - 1; k > 0; k--) {
-                    if (final_results[k].distance < final_results[k - 1].distance) {
-                        Match temp = final_results[k];
-                        final_results[k] = final_results[k - 1];
-                        final_results[k - 1] = temp;
-                    } else break;
-                }
-            }
-        }
+    for (int i = 0; i < THREAD_NUMBER; i++) {
+        merge_thread_results(final_results, args[i].local_result);
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-
-    double diff = (end.tv_sec - start.tv_sec) * 1000.0 + 
-                  (end.tv_nsec - start.tv_nsec) / 1000000.0;
-
-    dprintf(conn_fd, "Search completed in %.3f ms (using %d threads)\n", diff, THREAD_NUMBER);
-    dprintf(conn_fd, "--- Top Search Results ---\n");
-    
-    for (int i = 0; i < MATCH_SIZE; i++) {
-        if (final_results[i].distance == INFINITY) continue;
-        dprintf(conn_fd, "%d. ID %u (Distance: %.4f)\n", i + 1, final_results[i].id, final_results[i].distance);
-    }
-    dprintf(conn_fd, "<END>\n");
+    print_top_search(conn_fd, final_results);
 }
 
+/* ============================================
+ * HELPER FUNCTIONS
+ * ============================================ */
 
-float calculateDistance(const float* v1, const float* v2) {
+float calculateDistance(const float* v1, const float* v2)
+{
     float sum = 0.0;
     for (int i = 0; i < DIMENSION; i++) {
         float diff = v1[i] - v2[i];
-        sum += diff*diff;
+        sum += diff * diff;
     }
     return sqrtf(sum);
 }
 
-
 /**
- * ========================
- * Helper Functions
- * ========================
+ * Send row to output with optional full vector display
+ * full_vector: 1 for complete vector, 0 for abbreviated (first 3 and last 3 elements)
  */
-
-
-static void* search_worker(void* arg) {
-    search_worker_args_t* args = (search_worker_args_t*)arg;
-    Row row;
-
-    for (size_t i = 0; i < MATCH_SIZE; i++) {
-        args->local_top_distances[i] = INFINITY;
-        args->local_top_ids[i] = 0;
-    }
-
-    for (uint32_t i = args->start_row; i < args->end_row; i++) {
-        if (read_row(args->table, i, &row) && !row.is_deleted) {
-            float dist = calculateDistance(args->query_vector, row.vector);
-
-            if (dist < args->local_top_distances[MATCH_SIZE-1]) {
-                args->local_top_distances[MATCH_SIZE-1] = dist;
-                args->local_top_ids[MATCH_SIZE-1] = row.id;
-
-                for (int j = MATCH_SIZE-1; j > 0; j--) {
-                    if (args->local_top_distances[j] < args->local_top_distances[j-1]) {
-                        float td = args->local_top_distances[j];
-                        int ti = args->local_top_ids[j];
-
-                        args->local_top_distances[j] = args->local_top_distances[j - 1];
-                        args->local_top_ids[j] = args->local_top_ids[j - 1];
-
-                        args->local_top_distances[j - 1] = td;
-                        args->local_top_ids[j - 1] = ti;
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    
-    return NULL;
-}
-
-static void send_row(const Row* row, int output_fd)
+static void send_row(const Row* row, int output_fd, int full_vector)
 {
     dprintf(output_fd, "ID: %u | Vector: [", row->id);
     
-    if (DIMENSION > 6) {
+    if (!full_vector && DIMENSION > 6) {
         for (int i = 0; i < 3; i++) {
-            dprintf(output_fd, "%.2f%s", row->vector[i], ", ");
+            dprintf(output_fd, "%.2f, ", row->vector[i]);
         }
         dprintf(output_fd, "... , ");
         for (int i = DIMENSION - 3; i < DIMENSION; i++) {
@@ -243,11 +175,85 @@ static void send_row(const Row* row, int output_fd)
     dprintf(output_fd, "]\n");
 }
 
-static void send_row_full(const Row* row, int output_fd)
+/**
+ * Insert a match into the sorted array, maintaining top MATCH_SIZE results
+ */
+static void insert_match_in_sorted_array(Match* array, float distance, uint32_t id)
 {
-    dprintf(output_fd, "ID: %u | Vector : [", row->id);
-    for (int i = 0; i < DIMENSION; i++) {
-            dprintf(output_fd, "%.2f%s", row->vector[i], ", ");
+    if (distance >= array[MATCH_SIZE - 1].distance) {
+        return;
     }
-    dprintf(output_fd, "]\n");
+
+    array[MATCH_SIZE - 1].distance = distance;
+    array[MATCH_SIZE - 1].id = id;
+
+    for (int i = MATCH_SIZE - 1; i > 0; i--) {
+        if (array[i].distance < array[i - 1].distance) {
+            swap_matches(array, i);
+        } else {
+            break;
+        }
+    }
+}
+
+/**
+ * Swap two adjacent match entries in an array
+ */
+static void swap_matches(Match* array, int i)
+{
+    Match temp = array[i];
+    array[i] = array[i - 1];
+    array[i - 1] = temp;
+}
+
+/**
+ * Merge thread results into final results array
+ */
+static void merge_thread_results(Match* final_results, const Match* thread_results)
+{
+    for (int i = 0; i < MATCH_SIZE; i++) {
+        if (thread_results[i].distance != INFINITY) {
+            insert_match_in_sorted_array(final_results, thread_results[i].distance, thread_results[i].id);
+        }
+    }
+}
+
+/**
+ * Worker thread for parallel search
+ */
+static void* search_worker(void* arg)
+{
+    search_worker_args_t* args = (search_worker_args_t*)arg;
+    Row row;
+
+    /* Initialize local results */
+    for (int i = 0; i < MATCH_SIZE; i++) {
+        args->local_result[i].distance = INFINITY;
+        args->local_result[i].id = 0;
+    }
+
+    /* Search assigned rows */
+    for (uint32_t i = args->start_row; i < args->end_row; i++) {
+        if (read_row(args->table, i, &row) && !row.is_deleted) {
+            float dist = calculateDistance(args->query_vector, row.vector);
+            insert_match_in_sorted_array(args->local_result, dist, row.id);
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ * Print top search results
+ */
+void print_top_search(int conn_fd, const Match final_results[MATCH_SIZE])
+{
+    dprintf(conn_fd, MSG_TOP_SEARCH);
+    for (int i = 0; i < MATCH_SIZE; i++) {
+        if (final_results[i].distance == INFINITY) {
+            continue;
+        }
+        dprintf(conn_fd, "%d. ID %u (Distance: %.4f)\n", i + 1, final_results[i].id, final_results[i].distance);
+    }
+    dprintf(conn_fd, RESPONSE_END_MARKER);
 }

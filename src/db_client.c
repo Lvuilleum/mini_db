@@ -10,9 +10,6 @@
 #include "storage.h"
 #include "protocol.h"
 
-#define RESPONSE_END_MARKER "<END>\n"
-
-
 /* Print built-in command documentation for the CLI. */
 static void print_help(void)
 {
@@ -27,9 +24,10 @@ static void print_help(void)
     printf("  .exit\n");
 }
 
+
 static void read_response(int sockfd)
 {
-    char response[4096];
+    char response[PAGE_SIZE];
     size_t used = 0;
 
     while (1) {

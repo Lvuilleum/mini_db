@@ -28,8 +28,8 @@ def send_to_db(command):
             if "<END>" in full_response: 
                 break
         
-        # MODIFICATION : On fait un "return" au lieu d'un "print"
         return full_response.replace("<END>", "")
+
 
 def insert_text(doc_id, text):
     # Transformation de la phrase en vecteur
@@ -37,32 +37,29 @@ def insert_text(doc_id, text):
     vector_str = " ".join(map(str, vector))
     command = f"insert {doc_id} {vector_str}"
     
-    # On envoie au C
     send_to_db(command)
     
-    # NOUVEAU : On sauvegarde le texte en Python
     metadata = {}
     if os.path.exists(METADATA_FILE):
         with open(METADATA_FILE, 'r') as f:
             metadata = json.load(f)
             
-    metadata[str(doc_id)] = text # On associe l'ID au texte
+    metadata[str(doc_id)] = text
     
     with open(METADATA_FILE, 'w') as f:
         json.dump(metadata, f, indent=4)
         
     print(f"Inséré -> ID {doc_id} : '{text}'")
 
+
 def search_text(text):
     vector = model.encode(text)
     vector_str = " ".join(map(str, vector))
     command = f"search {vector_str}"
     
-    # On récupère la réponse du C (qui contient les IDs)
     response = send_to_db(command)
-    print(response) # On affiche ce que le C a répondu
+    print(response) 
     
-    # NOUVEAU : On traduit les IDs en texte
     metadata = {}
     if os.path.exists(METADATA_FILE):
         with open(METADATA_FILE, 'r') as f:
@@ -70,10 +67,8 @@ def search_text(text):
             
     print("--- Traduction des résultats ---")
     for line in response.split('\n'):
-        # On ne traite que les lignes qui commencent par un chiffre (ex: "1. ID 2")
         if "ID " in line:
             try:
-                # On isole l'ID plus proprement
                 parts = line.split("ID ")
                 found_id = parts[1].split(" ")[0].strip()
                 
@@ -81,6 +76,7 @@ def search_text(text):
                 print(f"-> {line} | Phrase: {phrase}")
             except:
                 continue
+
 
 def load_phrases_from_txt(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -100,19 +96,15 @@ def load_phrases_from_txt(file_path):
 
     return phrases
 
-# --- TEST ---
-# 1. On insère des connaissances
-# insert_text(1, "Le ciel est bleu et le soleil brille")
-# insert_text(2, "La recette des crêpes demande du lait et de la farine")
-if not TEXT_FILE.exists():
-    raise FileNotFoundError(f"Fichier introuvable: {TEXT_FILE}")
 
-for idx, phrase in enumerate(load_phrases_from_txt(TEXT_FILE), start=1):
-    if idx > 5000:
-        break
-    insert_text(idx, phrase)
+if __name__ == "__main__":
+    if not TEXT_FILE.exists():
+        raise FileNotFoundError(f"Fichier introuvable: {TEXT_FILE}")
 
+    for idx, phrase in enumerate(load_phrases_from_txt(TEXT_FILE), start=1):
+        if idx > 5000:
+            break
+        insert_text(idx, phrase)
 
-# 2. On fait une recherche sémantique
-print("\nRecherche pour : 'Comment faire de la cuisine ?'")
-search_text("Comment faire de la cuisine ?")
+    print("\nRecherche pour : 'Comment faire de la cuisine ?'")
+    search_text("Comment faire de la cuisine ?")
