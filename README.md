@@ -58,6 +58,8 @@ mini_database/
 ├── include/           # Header files (.h)
 ├── src/               # C Database Engine
 │   ├── db_server.c    # Server entry point
+│   ├── db_client.c    # Client entry point
+│   ├── parser.c       # Parse the client command
 │   ├── storage.c      # Binary I/O & fsync management
 │   └── database.c     # K-NN logic & distance calculations
 ├── scripts/           # Artificial Intelligence layer
